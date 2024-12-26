@@ -1,12 +1,12 @@
 {
   "name": "codecord",
-  "version": "1.2.0-dev.4",
+  "version": "2.0.0-dev",
   "description": "A tool-kit for easy discord bot creation, built over discord.js",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
   "types": "dist/index.d.ts",
   "scripts": {
-    "build": "tsup src/ --format cjs,esm --dts",
+    "build": "pnpm install && tsup src/ --format cjs,esm --dts",
     "lint": "tsc"
   },
   "repository": {

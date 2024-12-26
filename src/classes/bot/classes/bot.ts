@@ -1,6 +1,4 @@
-import { Interaction as DjsInteraction } from "discord.js";
-import { Command } from "./command";
-import { BotConfig, BotOptionsData, BotOptions } from "../types/bot";
+import { BotOptions } from "../types/bot";
 import {
   botConstructorFromInvocation,
   getBotOptionsData,

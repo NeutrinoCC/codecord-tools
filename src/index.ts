@@ -1,4 +1,3 @@
-import _Bot from "./classes/bot";
 import { Collector } from "./classes/collector";
 import { Book } from "./classes/book";
 import { JsonManager } from "./classes/jsonManager";
@@ -9,8 +8,7 @@ import { DateParser } from "./classes/date";
 import { Ini } from "./classes/ini";
 import { Branding } from "./classes/branding";
 import { Timeout } from "./classes/timeout";
-
-const { Bot, Command, Interaction, Event } = _Bot;
+import { Bot, Command, Interaction, Event } from "./classes/bot";
 
 export default {
   Timeout,

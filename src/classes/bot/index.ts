@@ -1,3 +1,3 @@
-import classes from "./classes";
+import { Bot, Command, Event, Interaction } from "./classes";
 
-export default classes;
+export { Bot, Command, Event, Interaction };
