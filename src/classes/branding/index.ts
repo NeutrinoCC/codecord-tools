@@ -1,6 +1,5 @@
 import { EmbedBuilder, Guild } from "discord.js";
 import { Portrait } from "../portrait";
-import { CoordinateReference } from "../portrait/types";
 
 const { getColorFromURL } = require("color-thief-node");
 
@@ -78,8 +77,7 @@ export class Branding {
 
       await portrait.drawImage({
         imageURL: icon,
-        borderWidth: 5,
-        borderColor: color.hex || "#FFFFFF",
+        border: { width: 5, color: color.hex },
         x: portrait.canvas.width / 2 - iconSize / 2,
         y: portrait.canvas.height / 2 - iconSize / 2,
         width: 255,

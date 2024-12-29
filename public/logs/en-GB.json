@@ -1,50 +1,30 @@
 {
-  "error": {
-    "configFileDoesNotExist": "The file \"{path}\" does not exist.",
-    "errorOnConfigFileRead": "An error ocurred trying to read configuration:\n{error}",
-    "noToken": "Please assign a token to your bot.",
-    "base64Id": "Cannot parse the client base64 id from your token, please check if it's correct.",
-    "clientConnectionFailed": "Couldn't connect to discord:\n{error}",
-    "clientDisconnectionFailed": "Couldn't kill the bot instance, shutting down."
+  "book": {
+    "error": {
+      "noInteraction": "Book must have a interaction as target to reply."
+    },
+    "warn": {
+      "writeError": "An error ocurred trying to write book.\n{error}"
+    }
   },
-  "warn": {
-    "commandRegisterError": "An error ocurred on command register:\n{error}",
-    "noCommandFound": "No command found: /{command}",
-    "noCommandExecutionAssigned": "No command execution assigned for /{command}",
-    "commandExecution": "An error ocurred on /{command} execution:\n{error}",
-    "noInteractionExecutionFound": "No function found for interaction: {interaction}",
-    "interactionExecution": "An error ocurred on {interaction}:\n{error}",
-    "requireFileError": "An error ocurred trying to access the contents of {file}:\n{error}"
+  "collector": {
+    "error": {
+      "invalidChannel": "Channel must be text based to listen interactions.",
+      "interactionNoReplied": "Interaction must be replied before making the collector to listen other component interactions.",
+      "fetchReplyError": "An error ocurred trying to fetch the interaction reply. Can't start collector.\n{error}",
+      "minimumInputs": "Submission requires at least 1 input.",
+      "alreadyReplied": "To create a submission, the interaction must not be replied."
+    },
+    "warn": {
+      "userTimeout": "@{user} is on timeout, cancelling submission request."
+    },
+    "log": {
+      "submitted": "{m} {username} submitted {modal}."
+    }
   },
-  "bot": {
-    "interaction": {
-      "command": "@{username} (id@{userId}) used /{command}",
-      "component": "{type} {username} interacted with {customId}"
-    },
-    "event": {
-      "listen": "{eventLength} listeners assigned to \"{eventName}\"."
-    },
-    "start": {
-      "first": "Recieved invoke instruction, creating new bot...",
-      "config": "Bot config:\n{config}",
-      "client": "Creating new instance of DiscordJS client...",
-      "files": "Loading files...",
-      "readPath": "Reading path: {path}",
-      "foundFile": "> Reading contents of {file}",
-      "fileInstance": "\t- ContentType: {instance}",
-      "fileAbsolutePath": "\t- Absolute Path: {path}",
-      "commandRegister": "Registering commands...",
-      "commandRegisterReport": "Registered {amount} slash commands {/} to the discord API in {delay}ms.",
-      "interactionHandler": "Setting up interaction handler...",
-      "eventListeners": "Starting event listening...",
-      "commandsReport": "Loaded {total} commands:\n{list}",
-      "interactionsReport": "Loaded {total} interactions:\n{list}",
-      "eventsReport": "Loaded {total} events:\n{list}",
-      "end": "Bot created successfully.",
-      "logging": "Connecting...",
-      "connected": "Connected as {username}"
-    },
-    "disconnect": "Recieved kill function.",
-    "disconnected": "Disconnected."
+  "panel": {
+    "error": {
+      "invalidPath": "Json file path is invalid.\nRecieved: {path}"
+    }
   }
 }

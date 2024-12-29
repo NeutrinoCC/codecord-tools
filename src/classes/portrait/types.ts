@@ -13,8 +13,7 @@ export enum CoordinateReference {
 
 export interface ImageOptions {
   imageURL: string;
-  borderWidth?: number;
-  borderColor?: string;
+  border?: { width?: number; color?: string };
   frame?: number;
   x?: number;
   y?: number;

@@ -1,112 +1,115 @@
+import { log } from "../../log";
 import { Collector } from "../collector";
-import {
-  BookConstructor,
-  BookInteraction,
-  Length,
-  PageLength,
-  Render,
-} from "./types";
+import { BookElements, BookInteraction, BookOptions, Render } from "./types";
 
 export class Book {
-  // functions
   render: Render;
-  length: Length;
-  pageLength?: PageLength;
-
-  // numbers
-  page: number;
-  paragraph: number;
-  interaction: BookInteraction;
+  elements: BookElements = [];
+  elementsPerPage: number;
+  interaction;
   collector: Collector;
 
-  constructor({ render, length, pageLength, interaction }: BookConstructor) {
+  page: number;
+  paragraph: number;
+
+  constructor({ render, elements, elementsPerPage, interaction }: BookOptions) {
     this.render = render;
-    this.length = length;
-    this.pageLength = pageLength;
-    this.page = 1;
-    this.paragraph = 1;
+    this.elementsPerPage = elementsPerPage || 1;
     this.interaction = interaction;
     this.collector = new Collector(interaction);
+
+    if (elements) this.elements = elements;
+
+    this.page = 1;
+    this.paragraph = 1;
   }
 
-  // when new pages or elements vary on stage
-  async fix() {
-    const pages = (await this.length?.()) || 0;
+  /**
+   * Renders the book and writes (replies the interaction or updates the reply)
+   * @example
+   * await book.write()
+   */
+  async write() {
+    const pageElements = await this.getPageElements();
 
-    if (pages <= 0) this.page = 1;
-    else if (this.page > pages) this.page = pages;
+    const render: any = await this.render(pageElements);
 
-    if (this.pageLength) {
-      const paragraphs = await this.pageLength();
+    try {
+      if (this.interaction.replied || this.interaction.deferred)
+        await this.interaction.editReply(render);
+      else await this.interaction.reply(render);
+    } catch (error) {
+      this.collector.stop();
 
-      if (this.paragraph > paragraphs) this.paragraph = paragraphs;
-      else if (this.paragraph <= 0) this.paragraph = 1;
+      log("book.warn.writeError", {
+        lang: this.interaction.locale,
+        replacements: {
+          error: String(error),
+        },
+      });
     }
   }
 
-  async write() {
-    let render = await this.render?.();
-
-    if (
-      this.interaction &&
-      (this.interaction.replied || this.interaction.deferred)
-    )
-      await this.interaction.editReply(render);
-  }
-
+  /**
+   * Pass the page
+   */
   async next() {
-    this.page++;
+    this.page += 1;
 
-    const pages = (await this.length?.()) || 0;
+    const pages = await this.getPages();
 
     if (this.page > pages) this.page = 1;
 
-    this.paragraph = 1;
-
     await this.write();
   }
 
+  /**
+   * Go to previous page
+   */
   async previous() {
-    this.page--;
+    this.page -= 1;
 
-    const pages = (await this.length?.()) || 0;
+    const pages = await this.getPages();
 
     if (this.page <= 0) this.page = pages;
 
-    this.paragraph = 1;
+    await this.write();
+  }
+
+  async goToParagraph(index: number) {
+    const pageElements = await this.getPageElements();
+
+    if (index > pageElements.length) index = 1;
+    else if (index <= 0) index = pageElements.length;
+
+    this.paragraph = index;
 
     await this.write();
   }
 
-  // change paragraph value
-  async slide(n: number) {
-    this.paragraph += n;
+  // returns the total elements in this book
+  private getElements = async () =>
+    typeof this.elements === "object" ? this.elements : await this.elements();
 
-    if (!this.pageLength) return;
+  // returns the number of pages of this book
+  private getPages = async (elements?: any[]) => {
+    let pages =
+      (elements || (await this.getElements())).length / this.elementsPerPage;
 
-    const paragraphs = await this?.pageLength();
+    if (pages % 1 !== 0) pages += 1;
 
-    if (this.paragraph <= 0) this.paragraph = paragraphs;
-    else if (this.paragraph > paragraphs) this.paragraph = 1;
+    return Number(pages.toFixed(0));
+  };
 
-    await this.write();
-  }
+  // gets the elements of a page
+  private getPageElements = async (page?: number, elements?: any[]) => {
+    if (!page) page = this.page; // use the current page if not declared
 
-  setRender(render: Render) {
-    this.render = render;
+    const _elements = elements || (await this.getElements());
 
-    return this;
-  }
-
-  setLength(length: Length) {
-    this.length = length;
-
-    return this;
-  }
-
-  setPageLength(pageLength: PageLength) {
-    this.pageLength = pageLength;
-
-    return this;
-  }
+    return _elements.slice(
+      (page - 1) * this.elementsPerPage,
+      (page - 1) * this.elementsPerPage + this.elementsPerPage
+    );
+  };
 }

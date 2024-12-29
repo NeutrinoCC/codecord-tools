@@ -2,20 +2,23 @@ import {
   ActionRowBuilder,
   ChannelType,
   ChatInputCommandInteraction,
+  InteractionCollector,
   Message,
+  MessageCollector,
   MessageComponentInteraction,
   ModalBuilder,
   ModalSubmitInteraction,
   TextInputBuilder,
 } from "discord.js";
 import { InteractionListenersObject, InteractionListener } from "./types";
-import ApiError from "../../errors/index";
 import { Timeout } from "../timeout";
+import { log } from "../../log";
 
-const timeout = new Timeout({ maxStrikes: 20 });
+const cooldown = new Timeout({ maxStrikes: 20 });
 
 export class Collector {
   interaction: ChatInputCommandInteraction | MessageComponentInteraction;
+  collectors: Set<InteractionCollector<any> | MessageCollector> = new Set();
 
   constructor(
     interaction: ChatInputCommandInteraction | MessageComponentInteraction
@@ -23,38 +26,52 @@ export class Collector {
     this.interaction = interaction;
   }
 
+  /**
+   *
+   * @example
+   * await collector.listen({
+   *  'red-button': (i) => i.reply('You pressed the red button! 🔴'),
+   *  'green-button': (i) => i.reply('You pressed the green button! 🟢')
+   * }, 10 * 60 * 1000); // time when the collector is going to be active (empty for infinite)
+   *
+   *
+   * @void
+   */
   async listen(
     listeners: InteractionListenersObject,
     timeoutMiliseconds?: number
   ) {
-    if (
-      !this.interaction.channel ||
-      !this.interaction.channel.isTextBased() ||
-      this.interaction.channel.type === ChannelType.GroupDM
-    )
-      ApiError.throw("collectorError");
+    const { channel, locale: lang } = this.interaction;
 
-    let reply = await this.interaction.fetchReply().catch(() => null);
+    // if the channel is not valid
+    if (!channel || !channel.isTextBased() || channel.isDMBased())
+      throw log.error("collector.error.invalidChannel", { lang });
 
-    if (!reply)
-      reply = await this.interaction
-        .reply({
-          content: "Cargando...",
-          ephemeral: true,
-          fetchReply: true,
-        })
-        .catch(() => null);
+    // if the interaction is not replied yet
+    if (!this.interaction.replied)
+      throw log.error("collector.error.interactionNoReplied", {
+        lang,
+      });
 
-    if (!reply) return ApiError.throw("collectorError");
+    const reply = await this.interaction.fetchReply().catch((error) => {
+      throw log.error("collector.error.fetchReplyError", {
+        lang,
+        replacements: { error: String(error) },
+      });
+    });
 
     const filter = (i: MessageComponentInteraction) =>
       reply.id === i.message.id && this.interaction.user.id === i.user.id;
 
-    const collector = this.interaction.channel.createMessageComponentCollector({
+    // create collector
+    const collector = channel.createMessageComponentCollector({
       time: timeoutMiliseconds || 15 * 60 * 60 * 1000,
       filter,
     });
 
+    this.collectors.add(collector);
+
+    // assign collector listeners
     collector.on("collect", async (i: MessageComponentInteraction) => {
       const listener: InteractionListener | undefined = listeners[i.customId];
 
@@ -65,47 +82,61 @@ export class Collector {
       if (listeners.default) await listeners.default(i);
     });
 
+    // remove components from message
     collector.once("end", async () => {
-      collector.stop();
-
       if (this.interaction.replied)
         await this.interaction.editReply({ components: [] }).catch((e) => null);
     });
-
-    return collector;
   }
 
+  stop() {
+    for (const collector of Array.from(this.collectors.values())) {
+      collector.stop();
+      this.collectors.delete(collector);
+    }
+  }
+
+  /**
+   *
+   * @param listener
+   * @param timeoutMiliseconds
+   * @example
+   *  collector.awaitMessage((message) => {
+   *    if(!message.content.startsWith('+')) return;
+   *
+   *    await message.reply("Message recieved!")
+   * }, 10 * 60 * 1000); // ten minutes to send the message
+   */
   async awaitMessage(
     listener: (message: Message) => Promise<any>,
     timeoutMiliseconds?: number
   ) {
-    if (
-      !this.interaction.channel ||
-      this.interaction.channel.type === ChannelType.GroupDM
-    )
-      ApiError.throw("collectorError");
+    const { channel, locale: lang } = this.interaction;
 
-    let reply = await this.interaction.fetchReply().catch(() => null);
+    // if the channel is not valid
+    if (!channel || !channel.isTextBased() || channel.isDMBased())
+      throw log.error("collector.error.invalidChannel", { lang });
 
-    if (!reply)
-      reply = await this.interaction
-        .reply({
-          content: "Cargando...",
-          ephemeral: true,
-          fetchReply: true,
-        })
-        .catch(() => null);
+    // if the channel is not valid
+    if (!channel || !channel.isTextBased() || channel.isDMBased())
+      throw log.error("collector.error.invalidChannel", { lang });
 
-    if (!reply) ApiError.throw("collectorError");
+    // if the interaction is not replied yet
+    if (!this.interaction.replied)
+      throw log.error("collector.error.interactionNoReplied", {
+        lang,
+      });
 
-    const filter = (message: Message) =>
-      this.interaction.user.id === message.author.id;
+    const filter = (i: Message) => this.interaction.user.id === i.author.id;
 
-    const collector = this.interaction.channel.createMessageCollector({
+    // create a message collector
+    const collector = channel.createMessageCollector({
       time: timeoutMiliseconds || 15 * 60 * 60 * 1000,
       filter,
       maxProcessed: 1,
     });
+
+    this.collectors.add(collector);
 
     collector.on("collect", listener);
 
@@ -116,53 +147,79 @@ export class Collector {
     return collector;
   }
 
-  async submission(
-    subInteraction: MessageComponentInteraction | ChatInputCommandInteraction,
-    options: {
-      inputs: TextInputBuilder[];
-      timeMiliseconds?: number;
-      title?: string;
-      timeout?: boolean;
-    }
-  ) {
-    if (options.timeout && timeout.is(subInteraction.user.id)) return;
+  /**
+   *  Creates a new modal submission
+   * @example
+   * await collector.submission({
+   *  title: 'Favourite fruit',
+   *  timeMiliseconds: 10 * 60 * 1000, // ten minutes to reply the modal
+   *  cooldown: true, // prevents the user to spam interactions
+   *  interaction: someInteraction, // discord.js cmd or component interaction
+   *  inputs: [{
+   *    new TextInputBuilder() // discord.js text input builder class
+   *    .setCustomId('fruit')
+   *    .setLabel('Favourite fruit')
+   *    .setStyle(TextInputStyle.Short)
+   *  }],
+   * });
+   * @returns
+   */
+  async submission(options: {
+    inputs: TextInputBuilder[];
+    timeMiliseconds?: number;
+    title?: string;
+    cooldown?: boolean;
+    interaction?: MessageComponentInteraction | ChatInputCommandInteraction;
+    logs: boolean;
+  }) {
+    const interaction = options.interaction || this.interaction;
 
-    const { timeMiliseconds, title, inputs } = options;
+    const { locale: lang, user } = interaction;
 
-    const custom_id = `submission:${subInteraction.id}`;
+    if (interaction.replied)
+      throw log.error("collector.error.alreadyReplied", { lang });
+
+    if (options.cooldown && cooldown.is(user.id))
+      return log("collector.warn.userTimeout", {
+        lang,
+        replacements: { user: user.username },
+      });
+
+    const { timeMiliseconds, title, inputs, logs } = options;
+
+    const custom_id = `submission:${interaction.id}`;
 
     const modal = new ModalBuilder({
       title: title || "Rellena el formulario",
       custom_id,
     });
 
-    if (inputs.length < 1) ApiError.throw("modalInputError");
+    if (inputs.length < 1)
+      throw log.error("collector.error.minimumInputs", { lang });
 
-    for (const input of inputs) {
-      const row = new ActionRowBuilder<TextInputBuilder>().addComponents(input);
-
-      modal.addComponents(row);
-    }
-
-    const filter = (submission: ModalSubmitInteraction) => {
-      if (
-        subInteraction.isMessageComponent() &&
-        (!submission.message ||
-          submission.message.id !== subInteraction.message.id)
-      )
-        return false;
-
-      return (
-        submission.user.id === subInteraction.user.id &&
-        submission.customId === custom_id
+    // push a new row builder to the modal component for each input
+    for (const input of inputs)
+      modal.addComponents(
+        new ActionRowBuilder<TextInputBuilder>().addComponents(input)
       );
-    };
 
-    if (options.timeout) timeout.set(subInteraction.user.id, 2 * 60 * 1000);
+    const filter = interaction.isMessageComponent()
+      ? // if the interaction is a button, then the message can be used as filter
+        (submission: ModalSubmitInteraction) =>
+          submission.message?.id === interaction.message.id &&
+          submission.user.id === interaction.user.id &&
+          submission.customId === custom_id
+      : // if the interaction is a slash command
+        (submission: ModalSubmitInteraction) =>
+          submission.user.id === interaction.user.id &&
+          submission.customId === custom_id;
 
-    await subInteraction.showModal(modal);
+    if (options.cooldown) cooldown.set(user.id, 2 * 60 * 1000);
 
-    const submission = await subInteraction
+    await interaction.showModal(modal);
+
+    // awaits the modal to be submitted.
+    const submission = await interaction
       .awaitModalSubmit({
         time: timeMiliseconds || 5 * 60 * 1000,
         filter,
@@ -171,11 +228,13 @@ export class Collector {
         return null;
       });
 
-    if (!submission) return undefined;
+    if (!submission) return undefined; // if the modal is not replied
 
-    console.log(
-      `\t${subInteraction.user.username} submitted ${title || "a modal"}.`
-    );
+    if (logs === undefined || logs === true)
+      log("collector.log.submitted", {
+        lang,
+        replacements: { username: user.username, modal: title || "a modal" },
+      });
 
     const values = new Map<string, string>();
 

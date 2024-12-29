@@ -3,11 +3,12 @@ import {
   MessageComponentInteraction,
   MessageEditOptions,
   MessagePayload,
-  ModalSubmitInteraction,
 } from "discord.js";
 
 // Type for a function that renders a message, returning either a payload or editing options
-export type Render = () =>
+export type Render = (
+  pageElements: any[]
+) =>
   | Promise<MessagePayload | MessageEditOptions>
   | MessagePayload
   | MessageEditOptions;
@@ -29,4 +30,13 @@ export interface BookConstructor {
   length: Length; // Method to get the length
   pageLength?: PageLength; // Optional method to get the length of pages
   interaction: BookInteraction; // Interaction used for the book
+}
+
+export type BookElements = any[] | (() => Promise<any[]>) | (() => any[]);
+
+export interface BookOptions {
+  render: Render;
+  elements?: BookElements;
+  elementsPerPage?: number;
+  interaction: BookInteraction;
 }

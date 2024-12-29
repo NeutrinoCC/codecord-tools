@@ -1,4 +1,4 @@
-import { JsonManager } from "../classes/jsonManager";
+import { JsonManager } from "@codecord/core";
 import fs from "fs";
 import path from "path";
 

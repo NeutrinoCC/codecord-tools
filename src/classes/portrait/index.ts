@@ -89,12 +89,10 @@ export class Portrait {
     align,
     justify,
     shadow,
-    borderWidth,
-    borderColor = "#FFFFFF",
+    border,
     frame,
   }: ImageOptions) {
     // Load the image
-
     const image = await loadImage(imageURL);
 
     // calculate image proportions
@@ -122,15 +120,15 @@ export class Portrait {
       }
 
       // Draw the border
-      if (borderWidth) {
+      if (border?.width) {
         // Draw the shadow
-        this.ctx.fillStyle = borderColor;
+        this.ctx.fillStyle = border.color || "#FFFFFF";
 
         this.ctx.fillRect(
-          x - borderWidth,
-          y - borderWidth,
-          width + borderWidth * 2,
-          height + borderWidth * 2
+          x - border.width,
+          y - border.width,
+          width + border.width * 2,
+          height + border.width * 2
         );
 
         // if there is border, then we delete the shadow for the image
@@ -149,7 +147,7 @@ export class Portrait {
       }
 
       // Draw the border
-      if (borderWidth) {
+      if (border?.width) {
         this.ctx.save();
 
         const curveRadius = Math.min(width, height) * (frame / 100);
@@ -158,7 +156,7 @@ export class Portrait {
 
         this.ctx.clip();
 
-        this.ctx.fillStyle = borderColor;
+        this.ctx.fillStyle = border.color || "#FFFFFF";
 
         this.ctx.stroke();
 
@@ -166,10 +164,10 @@ export class Portrait {
 
         this.ctx.restore();
 
-        width -= borderWidth * 2;
-        height -= borderWidth * 2;
-        x += borderWidth;
-        y += borderWidth;
+        width -= border.width * 2;
+        height -= border.width * 2;
+        x += border.width;
+        y += border.width;
       }
 
       // Create a rounded rectangle
