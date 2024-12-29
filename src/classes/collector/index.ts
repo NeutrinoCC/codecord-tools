@@ -179,11 +179,13 @@ export class Collector {
     if (interaction.replied)
       throw log.error("collector.error.alreadyReplied", { lang });
 
-    if (options.cooldown && cooldown.is(user.id))
-      return log("collector.warn.userTimeout", {
+    if (options.cooldown && cooldown.is(user.id)) {
+      log("collector.warn.userTimeout", {
         lang,
         replacements: { user: user.username },
       });
+      return;
+    }
 
     const { timeMiliseconds, title, inputs, logs } = options;
 
