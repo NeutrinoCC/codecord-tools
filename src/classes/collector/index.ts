@@ -170,7 +170,7 @@ export class Collector {
     title?: string;
     cooldown?: boolean;
     interaction?: MessageComponentInteraction | ChatInputCommandInteraction;
-    logs: boolean;
+    logs?: boolean;
   }) {
     const interaction = options.interaction || this.interaction;
 
