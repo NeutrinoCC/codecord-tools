@@ -8,7 +8,7 @@ export class Timestamp {
    * @returns
    */
   static fromDate = (date: Date, timestampType?: TimestampType) =>
-    `<t:${date.getTime() / 1000}:${timestampType || "F"}>`;
+    `<t:${(date.getTime() / 1000).toFixed(0)}:${timestampType || "F"}>`;
 
   static type = TimestampType;
 
