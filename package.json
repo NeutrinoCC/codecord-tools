@@ -11,17 +11,15 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/NeutrinoCC/codecord-utils.git"
+    "url": "git+https://github.com/NeutrinoCC/codecord-tools.git"
   },
-  "keywords": [
-    "cc"
-  ],
+  "keywords": [],
   "author": "Neutrino",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/NeutrinoCC/codecord-utils/issues"
+    "url": "https://github.com/NeutrinoCC/codecord-tools/issues"
   },
-  "homepage": "https://github.com/NeutrinoCC/codecord-utils#readme",
+  "homepage": "https://github.com/NeutrinoCC/codecord-tools#readme",
   "devDependencies": {
     "ts-node": "^10.9.2",
     "tsup": "^8.2.3",
